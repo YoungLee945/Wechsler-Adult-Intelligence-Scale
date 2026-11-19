@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WAIS-IV 架构 · 成人综合认知与智商评估系统</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Noto Sans SC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans SC"', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            clinical: {
+              50: '#f5f7ff',
+              100: '#ebf0fe',
+              200: '#d6e0fd',
+              500: '#4f46e5',
+              600: '#4338ca',
+              700: '#3730a3',
+              900: '#1e1b4b',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 柔和的页面过渡与视觉反馈动画 */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up {
+      animation: fadeSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes digitPop {
+      0% { opacity: 0; transform: scale(0.75); }
+      20% { opacity: 1; transform: scale(1.04); }
+      85% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.92); }
+    }
+    .animate-digit {
+      animation: digitPop 0.92s ease-in-out forwards;
+    }
+    /* 隐藏数字输入框箭头 */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- 全局顶部临床风导航栏 -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+          <!-- 认知评估图标 -->
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <div class="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">WAIS-IV 成人智商评估系统</div>
+          <div class="text-[11px] text-slate-500 hidden sm:block">Wechsler Adult Intelligence Scale · 标准化架构模拟版</div>
+        </div>
+      </div>
+
+      <!-- 测试进行中的阶段进度指示器 -->
+      <div id="header-progress-wrap" class="hidden items-center gap-2 sm:gap-3">
+        <div class="hidden md:flex items-center gap-1.5 text-xs font-medium" id="header-step-pills"></div>
+        <button id="btn-quit-modal" type="button" class="text-xs font-medium text-slate-500 hover:text-rose-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors">
+          退出评估
+        </button>
+      </div>
+    </div>
+    <!-- 细进度条 -->
+    <div id="top-progress-bar-bg" class="hidden h-1 w-full bg-slate-100">
+      <div id="top-progress-bar" class="h-full bg-indigo-600 transition-all duration-300" style="width: 0%;"></div>
+    </div>
+  </header>
+
+  <!-- 主内容容器 -->
+  <main id="app-root" class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col">
+    <!-- 由 JavaScript 动态渲染各个阶段视图 -->
+  </main>
+
+  <!-- 底部版权与专业声明 -->
+  <footer class="border-t border-slate-200/70 bg-white/60 py-4 px-4 text-center text-xs text-slate-500">
+    本系统严格参照 WAIS-IV 四大核心指数结构设计原创仿真题目，用于个人认知能力探索与自测参考，不替代临床心理师线下施测。
+  </footer>
+
+  <!-- 自定义确认弹窗（严禁使用 alert/confirm） -->
+  <div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 animate-fade-up">
+      <h3 id="modal-title" class="text-lg font-bold text-slate-900 mb-2">确认退出当前评估？</h3>
+      <p id="modal-desc" class="text-sm text-slate-600 leading-relaxed mb-6">退出后，您当前的作答进度和计时数据将会重置，无法生成本次智商报告。</p>
+      <div class="flex items-center justify-end gap-3">
+        <button id="modal-cancel" type="button" class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">继续测试</button>
+        <button id="modal-confirm" type="button" class="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors">确认退出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 轻提示 Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium shadow-lg transition-all">
+    已复制到剪贴板
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * WAIS-IV 架构成人智商测试核心引擎
+     * 模块划分：
+     * 1. 言语理解指数 (VCI): 类同 (Similarities) + 词汇与常识 (Vocabulary & Info)
+     * 2. 知觉推理指数 (PRI): 矩阵推理 (Matrix Reasoning) + 天平推理 (Figure Weights)
+     * 3. 工作记忆指数 (WMI): 动态数字广度 (Digit Span) + 限时心算 (Arithmetic)
+     * 4. 加工速度指数 (PSI): 限时符号搜索 (Symbol Search) + 数字符号编码 (Coding)
+     * =========================================================================
+     */
+
+    // =========================================================================
+    // 1. 矢量图形绘制工具 (用于矩阵推理、天平推理、符号搜索与编码)
+    // =========================================================================
+
+    /**
+     * 生成矩阵推理单格 SVG
+     */
+    function renderMatrixCellSVG(type, params, sizeClass = "w-full h-full") {
+      const wrapStart = `<svg viewBox="0 0 100 100" class="${sizeClass}" xmlns="http://www.w3.org/2000/svg">`;
+      const wrapEnd = `</svg>`;
+
+      // 题型1：形状 + 填充样式 (solid / outline / dot)
+      if (type === 'shapeStyle') {
+        const { shape, style } = params;
+        const color = '#4338ca';
+        const fill = style === 'solid' ? color : 'none';
+        const strokeWidth = style === 'solid' ? 0 : 6;
+        let shapeEl = '';
+
+        if (shape === 'circle') {
+          shapeEl = `<circle cx="50" cy="50" r="28" fill="${fill}" stroke="${color}" stroke-width="${strokeWidth}" />`;
+        } else if (shape === 'square') {
+          shapeEl = `<rect x="23" y="23" width="54" height="54" rx="4" fill="${fill}" stroke="${color}" stroke-width="${strokeWidth}" />`;
+        } else if (shape === 'triangle') {
+          shapeEl = `<polygon points="50,20 80,76 20,76" fill="${fill}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linejoin="round" />`;
+        }
+
+        let innerDot = '';
+        if (style === 'dot') {
+          const dotY = shape === 'triangle' ? 58 : 50;
+          innerDot = `<circle cx="50" cy="${dotY}" r="8" fill="${color}" />`;
+        }
+        return wrapStart + shapeEl + innerDot + wrapEnd;
+      }
+
+      // 题型2：中心旋转箭头 + 四角定位圆点
+      if (type === 'arrowCorner') {
+        const { angle, corner } = params;
+        // corner: 0=左上, 1=右上, 2=右下, 3=左下
+        const coords = [
+          { x: 18, y: 18 },
+          { x: 82, y: 18 },
+          { x: 82, y: 82 },
+          { x: 18, y: 82 },
+        ];
+        const c = coords[corner];
+        return wrapStart + `
+          <circle cx="50" cy="50" r="30" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2.5" />
+          <g transform="rotate(${angle} 50 50)">
+            <line x1="50" y1="70" x2="50" y2="30" stroke="#1e293b" stroke-width="5.5" stroke-linecap="round" />
+            <polyline points="38,42 50,28 62,42" fill="none" stroke="#1e293b" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+          </g>
+          <circle cx="${c.x}" cy="${c.y}" r="7.5" fill="#4f46e5" />
+        ` + wrapEnd;
+      }
+
+      // 题型3：3x3 迷你方格异或叠加 (XOR)
+      if (type === 'xorGrid') {
+        const { active } = params; // 0..8 索引数组
+        let rects = '';
+        for (let i = 0; i < 9; i++) {
+          const r = Math.floor(i / 3);
+          const c = i % 3;
+          const x = 14 + c * 25;
+          const y = 14 + r * 25;
+          const isOn = active.includes(i);
+          rects += `<rect x="${x}" y="${y}" width="22" height="22" rx="4" fill="${isOn ? '#3730a3' : '#f1f5f9'}" stroke="${isOn ? '#3730a3' : '#cbd5e1'}" stroke-width="2" />`;
+        }
+        return wrapStart + rects + wrapEnd;
+      }
+
+      // 题型4：外框形状 + 内嵌彩色圆点计数
+      if (type === 'outerDots') {
+        const { outer, color, count } = params;
+        const colorMap = {
+          blue: '#2563eb',
+          emerald: '#059669',
+          amber: '#d97706',
+        };
+        const dotColor = colorMap[color] || '#2563eb';
+        let frame = '';
+        if (outer === 'circle') {
+          frame = `<circle cx="50" cy="50" r="38" fill="#ffffff" stroke="#334155" stroke-width="4.5" />`;
+        } else if (outer === 'square') {
+          frame = `<rect x="14" y="14" width="72" height="72" rx="8" fill="#ffffff" stroke="#334155" stroke-width="4.5" />`;
+        } else if (outer === 'diamond') {
+          frame = `<polygon points="50,8 92,50 50,92 8,50" fill="#ffffff" stroke="#334155" stroke-width="4.5" stroke-linejoin="round" />`;
+        }
+
+        // 1~5 个圆点的标准对称排布坐标
+        const dotLayouts = {
+          1: [[50, 50]],
+          2: [[39, 50], [61, 50]],
+          3: [[50, 38], [38, 59], [62, 59]],
+          4: [[39, 39], [61, 39], [39, 61], [61, 61]],
+          5: [[50, 50], [36, 36], [64, 36], [36, 64], [64, 64]],
+        };
+        const pts = dotLayouts[count] || [];
+        const dots = pts.map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="6.5" fill="${dotColor}" />`).join('');
+        return wrapStart + frame + dots + wrapEnd;
+      }
+
+      return '';
+    }
+
+    /**
+     * 绘制天平推理中的单个几何砝码
+     */
+    function renderWeightShape(code, x, y, size = 18) {
+      const half = size / 2;
+      switch (code) {
+        case 'S': // 蓝色正方形
+          return `<rect x="${x - half}" y="${y - half}" width="${size}" height="${size}" rx="2.5" fill="#2563eb" stroke="#1e40af" stroke-width="1.5" />`;
+        case 'C': // 红色圆形
+          return `<circle cx="${x}" cy="${y}" r="${half}" fill="#e11d48" stroke="#9f1239" stroke-width="1.5" />`;
+        case 'T': // 绿色三角形
+          return `<polygon points="${x},${y - half} ${x + half + 1},${y + half} ${x - half - 1},${y + half}" fill="#059669" stroke="#065f46" stroke-width="1.5" stroke-linejoin="round" />`;
+        case 'A': // 琥珀色星形
+          return `<polygon points="${x},${y - half - 1} ${x + 3.5},${y - 3.5} ${x + half + 1},${y - 3} ${x + 5},${y + 2} ${x + 6.5},${y + half + 1} ${x},${y + 5.5} ${x - 6.5},${y + half + 1} ${x - 5},${y + 2} ${x - half - 1},${y - 3} ${x - 3.5},${y - 3.5}" fill="#d97706" stroke="#92400e" stroke-width="1.2" stroke-linejoin="round" />`;
+        case 'D': // 天蓝色菱形
+          return `<polygon points="${x},${y - half - 1} ${x + half + 1},${y} ${x},${y + half + 1} ${x - half - 1},${y}" fill="#0284c7" stroke="#075985" stroke-width="1.5" stroke-linejoin="round" />`;
+        case 'P': // 紫色五边形
+          return `<polygon points="${x},${y - half - 1} ${x + half + 1},${y - 2} ${x + 6},${y + half} ${x - 6},${y + half} ${x - half - 1},${y - 2}" fill="#7c3aed" stroke="#5b21b6" stroke-width="1.5" stroke-linejoin="round" />`;
+        default:
+          return '';
+      }
+    }
+
+    /**
+     * 渲染一架完整的平衡天平 SVG
+     */
+    function renderScaleSVG(leftItems, rightItems, isQuestion = false) {
+      const renderPanItems = (items, centerX) => {
+        if (items === '?') {
+          return `<text x="${centerX}" y="46" text-anchor="middle" font-size="24" font-weight="800" fill="#4f46e5">?</text>`;
+        }
+        const n = items.length;
+        const spacing = n > 3 ? 16 : 21;
+        const startX = centerX - ((n - 1) * spacing) / 2;
+        return items.map((code, idx) => renderWeightShape(code, startX + idx * spacing, 42, n > 3 ? 13 : 16)).join('');
+      };
+
+      return `
+        <svg viewBox="0 0 220 90" class="w-full max-w-[230px] h-auto mx-auto">
+          <!-- 底座与支点 -->
+          <polygon points="110,56 96,82 124,82" fill="${isQuestion ? '#4f46e5' : '#64748b'}" />
+          <rect x="82" y="80" width="56" height="5" rx="2.5" fill="${isQuestion ? '#3730a3' : '#475569'}" />
+          <!-- 横梁 -->
+          <rect x="35" y="54" width="150" height="4.5" rx="2.2" fill="${isQuestion ? '#4f46e5' : '#475569'}" />
+          <!-- 托盘支架 -->
+          <line x1="55" y1="56" x2="55" y2="52" stroke="#475569" stroke-width="3" />
+          <line x1="165" y1="56" x2="165" y2="52" stroke="#475569" stroke-width="3" />
+          <rect x="20" y="51" width="70" height="4" rx="2" fill="#334155" />
+          <rect x="130" y="51" width="70" height="4" rx="2" fill="#334155" />
+          <!-- 砝码 -->
+          ${renderPanItems(leftItems, 55)}
+          ${renderPanItems(rightItems, 165)}
+        </svg>
+      `;
+    }
+
+    /**
+     * 渲染天平选项中的砝码组合 SVG
+     */
+    function renderWeightOptionSVG(items) {
+      const n = items.length;
+      const spacing = n >= 5 ? 20 : 24;
+      const totalW = Math.max(110, n * spacing + 20);
+      const startX = totalW / 2 - ((n - 1) * spacing) / 2;
+      const shapes = items.map((code, i) => renderWeightShape(code, startX + i * spacing, 24, n >= 5 ? 16 : 19)).join('');
+      return `<svg viewBox="0 0 ${totalW} 48" class="h-11 w-auto mx-auto">${shapes}</svg>`;
+    }
+
+    /**
+     * 16 个高辨识度、严格区分的几何速测符号（供符号搜索与数字符号编码使用）
+     */
+    const PSI_SYMBOLS = [
+      // 0: 倒T
+      `<path d="M12 36 H36 M24 36 V12" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>`,
+      // 1: 十字加圆点
+      `<path d="M12 24 H36 M24 12 V36" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/><circle cx="33" cy="15" r="3" fill="currentColor"/>`,
+      // 2: 左开口U
+      `<path d="M14 14 H34 V34 H14" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+      // 3: 叉号带顶横
+      `<path d="M14 14 L34 34 M34 14 L14 34 M12 10 H36" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>`,
+      // 4: 菱形中横
+      `<polygon points="24,10 38,24 24,38 10,24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/><line x1="15" y1="24" x2="33" y2="24" stroke="currentColor" stroke-width="3"/>`,
+      // 5: 阶梯折线
+      `<path d="M12 34 V24 H24 V14 H36" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+      // 6: 圆带斜杠
+      `<circle cx="24" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="3.2"/><line x1="14" y1="34" x2="34" y2="14" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>`,
+      // 7: 三角带底线
+      `<polygon points="24,11 36,31 12,31" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/><line x1="10" y1="37" x2="38" y2="37" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>`,
+      // 8: 双平行等号带竖线
+      `<path d="M12 18 H36 M12 30 H36 M24 10 V38" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>`,
+      // 9: 弓形弧带竖
+      `<path d="M14 34 A12 12 0 0 1 34 34 M24 12 V34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>`,
+      // 10: 方框右上角点
+      `<rect x="13" y="13" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2"/><circle cx="24" cy="24" r="3.5" fill="currentColor"/>`,
+      // 11: 沙漏
+      `<polygon points="13,12 35,12 24,24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><polygon points="13,36 35,36 24,24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>`,
+      // 12: 向右双折箭头
+      `<path d="M13 14 L24 24 L13 34 M24 14 L35 24 L24 34" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>`,
+      // 13: 上圆下横
+      `<circle cx="24" cy="18" r="8" fill="none" stroke="currentColor" stroke-width="3.2"/><path d="M12 34 H36 M24 26 V34" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>`,
+      // 14: Z形折线带中点
+      `<path d="M13 14 H35 L13 34 H35" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>`,
+      // 15: 半圆加底三角
+      `<path d="M12 24 A12 12 0 0 1 36 24 Z" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/><line x1="24" y1="24" x2="24" y2="38" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>`
+    ];
+
+    function renderPSISymbolSVG(idx, sizeClass = "w-9 h-9") {
+      return `<svg viewBox="0 0 48 48" class="${sizeClass}">${PSI_SYMBOLS[idx]}</svg>`;
+    }
+
+    // =========================================================================
+    // 2. 标准化题库配置 (四大指数完整题项)
+    // =========================================================================
+
+    // 模块 1：言语理解指数 (VCI) — 类同 (Similarities) + 词汇与常识 (Vocabulary & Info)
+    // 类同题参照真实 WAIS 评分机制：最佳抽象归类得 2 分，次佳具体特征得 1 分，其余 0 分
+    const VCI_QUESTIONS = [
+      {
+        id: 'vci-1',
+        subtest: '类同推理 (Similarities)',
+        prompt: '「指南针」与「地图」在功能本质上最核心的共同点是什么？',
+        options: [
+          { key: 'A', text: '都是户外探险者经常随身携带的装备', score: 1 },
+          { key: 'B', text: '都是用于空间定向与路径导航的工具', score: 2 },
+          { key: 'C', text: '表面都印有方位标识或精密刻度', score: 1 },
+          { key: 'D', text: '都在古代大航海时代发挥过历史作用', score: 0 }
+        ],
+        bestKey: 'B',
+        explanation: '韦氏“类同”测验考察高阶抽象概括能力。“空间定向与路径导航工具”准确提炼了二者的上位功能概念（2分）；仅描述外观或使用场景属于具体级概括（1分）。'
+      },
+      {
+        id: 'vci-2',
+        subtest: '类同推理 (Similarities)',
+        prompt: '「民主制」与「君主制」在社会科学概念上最本质的共同点是什么？',
+        options: [
+          { key: 'A', text: '都是国家政权的组织形式与治理体制', score: 2 },
+          { key: 'B', text: '都需要设立最高领导人与政府官僚机构', score: 1 },
+          { key: 'C', text: '在人类文明史上经常发生相互更替', score: 0 },
+          { key: 'D', text: '都需要通过税收来维持国家正常运转', score: 1 }
+        ],
+        bestKey: 'A',
+        explanation: '二者的本质上位概念同属“政治体制/国家权力组织形式”（2分）。描述共有的行政特征或历史演变均属于次级关联。'
+      },
+      {
+        id: 'vci-3',
+        subtest: '类同推理 (Similarities)',
+        prompt: '「允许」与「禁止」这一对反义概念，其最深层的逻辑共同点是什么？',
+        options: [
+          { key: 'A', text: '二者语义截然相反，不能同时成立', score: 0 },
+          { key: 'B', text: '常见于规章制度或长辈对晚辈的要求中', score: 1 },
+          { key: 'C', text: '都是对行为边界进行规范与界定的机制', score: 2 },
+          { key: 'D', text: '都会对当事人的主观自由感产生心理影响', score: 1 }
+        ],
+        bestKey: 'C',
+        explanation: '对立概念的抽象归纳是韦氏类同的高难度核心题型。“允许”与“禁止”共同构成了“行为规则/边界界定”的两个维度（2分）。'
+      },
+      {
+        id: 'vci-4',
+        subtest: '词汇理解 (Vocabulary)',
+        prompt: '下列哪一项最精准地概括了书面词「掣肘（chè zhǒu）」的核心含义？',
+        options: [
+          { key: 'A', text: '在紧要关头相互扶持、共渡难关', score: 0 },
+          { key: 'B', text: '拉住手肘，比喻在做事时受到牵制或妨碍', score: 2 },
+          { key: 'C', text: '因犹豫不决而错失最佳行动时机', score: 0 },
+          { key: 'D', text: '双方因利益分配不均而爆发公开冲突', score: 0 }
+        ],
+        bestKey: 'B',
+        explanation: '“掣肘”原意为拉住别人的手肘，使其无法顺利书写或行动，引申为从旁牵制、干扰或掣肘。'
+      },
+      {
+        id: 'vci-5',
+        subtest: '科学常识 (Information)',
+        prompt: '地球上中纬度地区出现春夏秋冬四季更替的根本天文原因是什么？',
+        options: [
+          { key: 'A', text: '地球公转轨道呈椭圆形，近日点与远日点距离差异巨大', score: 0 },
+          { key: 'B', text: '太阳自身核聚变活动存在约一年的强弱周期', score: 0 },
+          { key: 'C', text: '地球自转轴相对于公转轨道平面存在约 23.5° 的倾斜角', score: 2 },
+          { key: 'D', text: '月球引力导致的海洋洋流与大气环流季节性转向', score: 0 }
+        ],
+        bestKey: 'C',
+        explanation: '正是由于黄赤交角（约23.5°）的存在，太阳直射点在南北回归线之间周期性移动，从而引发南北半球昼夜长短与正午太阳高度角的季节变化。'
+      },
+      {
+        id: 'vci-6',
+        subtest: '社会理解 (Comprehension)',
+        prompt: '现代法治体系普遍将「无罪推定」确立为核心原则，其最根本的制度价值在于？',
+        options: [
+          { key: 'A', text: '减少检察机关搜集证据的成本并加快庭审效率', score: 0 },
+          { key: 'B', text: '约束公权力边界，最大程度降低冤假错案风险以保障公民基本权利', score: 2 },
+          { key: 'C', text: '因为统计上大多数被起诉的嫌疑人最终确实没有犯罪', score: 0 },
+          { key: 'D', text: '赋予辩护律师在诉讼程序中高于法官的裁量地位', score: 0 }
+        ],
+        bestKey: 'B',
+        explanation: '“无罪推定”将举证责任归于控方，核心目的是平衡强大的国家公权力与个体公民之间的不对等，防止误判剥夺无辜者自由。'
+      }
+    ];
+
+    // 模块 2：知觉推理指数 (PRI) — 4 题矩阵推理 + 2 题天平推理 (共 12 分加权)
+    const PRI_QUESTIONS = [
+      {
+        id: 'pri-1',
+        subtest: '矩阵推理 (Matrix Reasoning)',
+        kind: 'matrix',
+        weight: 1.5,
+        prompt: '观察下方 3×3 图形矩阵的变化规律，选出最适合填入右下角「?」处的图形。',
+        cellType: 'shapeStyle',
+        grid: [
+          { shape: 'circle', style: 'solid' }, { shape: 'square', style: 'outline' }, { shape: 'triangle', style: 'dot' },
+          { shape: 'square', style: 'dot' }, { shape: 'triangle', style: 'solid' }, { shape: 'circle', style: 'outline' },
+          { shape: 'triangle', style: 'outline' }, { shape: 'circle', style: 'dot' }, null
+        ],
+        options: [
+          { key: 'A', params: { shape: 'square', style: 'outline' } },
+          { key: 'B', params: { shape: 'square', style: 'solid' } },
+          { key: 'C', params: { shape: 'circle', style: 'solid' } },
+          { key: 'D', params: { shape: 'square', style: 'dot' } },
+          { key: 'E', params: { shape: 'triangle', style: 'solid' } },
+        ],
+        bestKey: 'B',
+        explanation: '双重拉丁方规律：每一行都严格包含「圆形、正方形、三角形」各一个，且填充方式都包含「实心、空心、中心圆点」各一种。第三行缺少正方形和实心样式，因此为实心正方形（B）。'
+      },
+      {
+        id: 'pri-2',
+        subtest: '矩阵推理 (Matrix Reasoning)',
+        kind: 'matrix',
+        weight: 1.5,
+        prompt: '分析箭头指向与蓝色圆点位置的同步演变规律，选出缺失的图形。',
+        cellType: 'arrowCorner',
+        grid: [
+          { angle: 0, corner: 0 }, { angle: 45, corner: 1 }, { angle: 90, corner: 2 },
+          { angle: 90, corner: 1 }, { angle: 135, corner: 2 }, { angle: 180, corner: 3 },
+          { angle: 180, corner: 2 }, { angle: 225, corner: 3 }, null
+        ],
+        options: [
+          { key: 'A', params: { angle: 270, corner: 1 } },
+          { key: 'B', params: { angle: 270, corner: 0 } },
+          { key: 'C', params: { angle: 315, corner: 0 } },
+          { key: 'D', params: { angle: 90, corner: 0 } },
+          { key: 'E', params: { angle: 270, corner: 2 } },
+        ],
+        bestKey: 'B',
+        explanation: '规则一（中心箭头）：每向右一格顺时针旋转 45°，每向下一格顺时针旋转 90°，因此右下角为 225°+45°=270°（指向正左）。规则二（蓝色圆点）：每向右或向下一格沿四角顺时针移动一格，第三行依次为右下→左下→左上。综合选 B。'
+      },
+      {
+        id: 'pri-3',
+        subtest: '矩阵推理 (Matrix Reasoning · 进阶)',
+        kind: 'matrix',
+        weight: 2.5,
+        prompt: '找出每一行前两个图形组合成第三个图形的运算规则，推断出「?」处的图案。',
+        cellType: 'xorGrid',
+        grid: [
+          { active: [0, 1, 4, 6] }, { active: [1, 2, 4, 8] }, { active: [0, 2, 6, 8] },
+          { active: [0, 3, 4, 5] }, { active: [3, 4, 6, 7] }, { active: [0, 5, 6, 7] },
+          { active: [1, 2, 3, 7] }, { active: [0, 2, 3, 4] }, null
+        ],
+        options: [
+          { key: 'A', params: { active: [0, 1, 2, 3, 4, 7] } },
+          { key: 'B', params: { active: [2, 3] } },
+          { key: 'C', params: { active: [0, 1, 4, 7] } },
+          { key: 'D', params: { active: [0, 1, 4, 8] } },
+          { key: 'E', params: { active: [1, 4, 6, 7] } },
+        ],
+        bestKey: 'C',
+        explanation: '去同存异（异或 XOR）规律：每一行中，将第 1 格与第 2 格叠加，重叠的紫色方块相互抵消消失，仅保留不重叠的方块得到第 3 格。第三行中位置 2、3 重叠抵消，保留左上、上中、中心、下中（选项 C）。'
+      },
+      {
+        id: 'pri-4',
+        subtest: '矩阵推理 (Matrix Reasoning · 高阶)',
+        kind: 'matrix',
+        weight: 2.5,
+        prompt: '综合外框形状、圆点颜色与圆点数量三重维度，推断出右下角「?」处的图形。',
+        cellType: 'outerDots',
+        grid: [
+          { outer: 'circle', color: 'blue', count: 1 }, { outer: 'square', color: 'emerald', count: 2 }, { outer: 'diamond', color: 'amber', count: 3 },
+          { outer: 'diamond', color: 'emerald', count: 2 }, { outer: 'circle', color: 'amber', count: 3 }, { outer: 'square', color: 'blue', count: 5 },
+          { outer: 'square', color: 'amber', count: 3 }, { outer: 'diamond', color: 'blue', count: 1 }, null
+        ],
+        options: [
+          { key: 'A', params: { outer: 'circle', color: 'blue', count: 4 } },
+          { key: 'B', params: { outer: 'circle', color: 'emerald', count: 4 } },
+          { key: 'C', params: { outer: 'square', color: 'emerald', count: 4 } },
+          { key: 'D', params: { outer: 'circle', color: 'emerald', count: 5 } },
+          { key: 'E', params: { outer: 'diamond', color: 'emerald', count: 4 } },
+        ],
+        bestKey: 'B',
+        explanation: '三重独立规律：① 外框每行集齐圆、方、菱，第三行缺圆形；② 颜色每行集齐蓝、绿、橙，第三行缺绿色；③ 数量满足横向加法（第1列+第2列=第3列）：3+1=4。因此为内含 4 个绿点的圆形（B）。'
+      },
+      {
+        id: 'pri-5',
+        subtest: '天平推理 (Figure Weights)',
+        kind: 'weights',
+        weight: 1.5,
+        prompt: '已知上方两架天平均处于完美平衡状态。请问在第三架天平右侧放入哪一组砝码可使其保持平衡？',
+        scales: [
+          { left: ['S'], right: ['C', 'C'] },
+          { left: ['T'], right: ['S', 'C'] },
+          { left: ['T', 'S'], right: '?', isQuestion: true }
+        ],
+        options: [
+          { key: 'A', items: ['C', 'C', 'C', 'C'] },
+          { key: 'B', items: ['S', 'S', 'C'] },
+          { key: 'C', items: ['T', 'C'] },
+          { key: 'D', items: ['S', 'S', 'S'] },
+          { key: 'E', items: ['T', 'T'] }
+        ],
+        bestKey: 'B',
+        explanation: '设红圆 = 1，由天平一得蓝方 = 2；由天平二得绿三角 = 蓝方 + 红圆 = 3。问题左盘为「1绿三角 + 1蓝方」= 3 + 2 = 5。选项 B「2蓝方 + 1红圆」= 2+2+1 = 5，唯一平衡。'
+      },
+      {
+        id: 'pri-6',
+        subtest: '天平推理 (Figure Weights · 高阶)',
+        kind: 'weights',
+        weight: 2.5,
+        prompt: '根据前两架天平的等量关系，推算出使第三架天平平衡的唯一选项。',
+        scales: [
+          { left: ['A', 'A'], right: ['D', 'D', 'D'] },
+          { left: ['P', 'D'], right: ['A', 'A'] },
+          { left: ['P', 'A', 'A'], right: '?', isQuestion: true }
+        ],
+        options: [
+          { key: 'A', items: ['D', 'D', 'D', 'D'] },
+          { key: 'B', items: ['D', 'D', 'D', 'D', 'D'] },
+          { key: 'C', items: ['A', 'A', 'A'] },
+          { key: 'D', items: ['P', 'P', 'D', 'D'] },
+          { key: 'E', items: ['A', 'A', 'A', 'D'] }
+        ],
+        bestKey: 'B',
+        explanation: '由天平一可知「2黄星 = 3蓝菱」；代入天平二得「1紫五边形 + 1蓝菱 = 3蓝菱」，即「1紫五边形 = 2蓝菱」。问题左盘为「1紫五边形 + 2黄星」= 2蓝菱 + 3蓝菱 = 5蓝菱（选项 B）。'
+      }
+    ];
+
+    // 模块 3A：工作记忆 — 动态数字广度 (Digit Span)
+    const DIGIT_SPAN_TRIALS = [
+      {
+        id: 'ds-1',
+        mode: 'forward',
+        title: '数字顺背 (6位)',
+        instruction: '屏幕将逐个闪现 6 个数字（每个停留 1 秒）。播放结束后，请按【原顺序】输入完整数字。',
+        sequence: '492716',
+        expected: '492716',
+        weight: 2.0
+      },
+      {
+        id: 'ds-2',
+        mode: 'backward',
+        title: '数字倒背 (5位)',
+        instruction: '屏幕将逐个闪现 5 个数字。播放结束后，请按【完全相反的倒序】输入（例如看到 1-2-3 应输入 321）。',
+        sequence: '38519',
+        expected: '91583',
+        weight: 2.0
+      },
+      {
+        id: 'ds-3',
+        mode: 'sequencing',
+        title: '数字排序 (6位 · WAIS-IV 特色)',
+        instruction: '屏幕将逐个闪现 6 个乱序数字。播放结束后，请将它们按【从小到大】的顺序重新排列输入。',
+        sequence: '837294',
+        expected: '234789',
+        weight: 2.5
+      },
+      {
+        id: 'ds-4',
+        mode: 'backward',
+        title: '高阶数字倒背 (7位)',
+        instruction: '最终记忆负荷测试！屏幕将逐个闪现 7 个数字，请按【完全相反的倒序】输入。',
+        sequence: '6194825',
+        expected: '5284916',
+        weight: 2.5
+      }
+    ];
+
+    // 模块 3B：工作记忆 — 限时心算推理 (Arithmetic, 每题限时45秒)
+    const ARITHMETIC_QUESTIONS = [
+      {
+        id: 'ar-1',
+        timeLimit: 45,
+        weight: 1.5,
+        prompt: '一家独立书店上午卖出 28 本书，下午卖出的数量恰好是上午的一半多 5 本。请问这一天书店总共卖出多少本书？',
+        options: [
+          { key: 'A', text: '42 本' },
+          { key: 'B', text: '45 本' },
+          { key: 'C', text: '47 本' },
+          { key: 'D', text: '49 本' }
+        ],
+        bestKey: 'C',
+        explanation: '上午 28 本，下午 = 28 ÷ 2 + 5 = 19 本，全天总计 28 + 19 = 47 本。'
+      },
+      {
+        id: 'ar-2',
+        timeLimit: 45,
+        weight: 1.5,
+        prompt: '一列高铁于 09:45 从甲站发车，以 240 公里/小时的平均运行速度行驶 360 公里到达乙站（中途经停共耗时 15 分钟）。列车到达乙站的时间是？',
+        options: [
+          { key: 'A', text: '11:15' },
+          { key: 'B', text: '11:30' },
+          { key: 'C', text: '11:45' },
+          { key: 'D', text: '11:20' }
+        ],
+        bestKey: 'B',
+        explanation: '纯行驶时间 = 360 ÷ 240 = 1.5 小时（90分钟），加上停靠 15 分钟共 1 小时 45 分钟。09:45 + 1h45m = 11:30。'
+      },
+      {
+        id: 'ar-3',
+        timeLimit: 45,
+        weight: 2.0,
+        prompt: '一个项目组原计划由 6 名成员在 8 天内完成某项研发任务。合作 2 天后，有 2 名成员被调离，其余成员保持原效率继续推进。请问完成剩余任务还需要几天？',
+        options: [
+          { key: 'A', text: '7 天' },
+          { key: 'B', text: '8 天' },
+          { key: 'C', text: '9 天' },
+          { key: 'D', text: '10 天' }
+        ],
+        bestKey: 'C',
+        explanation: '总工作量 = 6×8 = 48 人·天；前 2 天完成 6×2 = 12 人·天，剩余 36 人·天。余下 4 人，需 36 ÷ 4 = 9 天。'
+      }
+    ];
+
+    // =========================================================================
+    // 3. 全局应用状态管理
+    // =========================================================================
+
+    const state = {
+      screen: 'welcome', // welcome | vci | pri | wmi_intro | digit_span | arithmetic | psi_intro | symbol_search | coding | report
+      ageGroup: '20-29', // 年龄常模组（用于加工速度年龄常模校正）
+      startedAt: null,
+      finishedAt: null,
+
+      // 各模块进度与答案记录
+      vciIndex: 0,
+      vciAnswers: [], // { id, key, score, bestKey }
+
+      priIndex: 0,
+      priAnswers: [], // { id, key, isCorrect, weight, bestKey }
+
+      dsIndex: 0,
+      dsPhase: 'ready', // ready | playing | input
+      dsInput: '',
+      dsAnswers: [], // { id, input, expected, score, maxScore }
+
+      arIndex: 0,
+      arTimeLeft: 45,
+      arAnswers: [], // { id, key, isCorrect, weight, bestKey, timedOut }
+
+      // PSI 符号搜索 (40秒)
+      ssTimeLeft: 40,
+      ssStarted: false,
+      ssCorrect: 0,
+      ssWrong: 0,
+      ssCurrent: null, // { targets: [a,b], pool: [5 items], hasMatch: bool }
+
+      // PSI 数字符号编码 (40秒)
+      cdTimeLeft: 40,
+      cdStarted: false,
+      cdCorrect: 0,
+      cdWrong: 0,
+      cdKeyMap: [0, 1, 2, 3, 4, 5, 6, 7, 8], // 数字 1..9 对应的符号索引
+      cdQueue: [], // 接下来的数字队列 (1..9)
+
+      // 定时器句柄集中管理，防止泄漏
+      timers: []
+    };
+
+    function clearAllTimers() {
+      state.timers.forEach(t => {
+        clearTimeout(t);
+        clearInterval(t);
+      });
+      state.timers = [];
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 2400);
+    }
+
+    // 绑定退出确认弹窗
+    document.getElementById('btn-quit-modal').addEventListener('click', () => {
+      const modal = document.getElementById('custom-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    });
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+      const modal = document.getElementById('custom-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    });
+    document.getElementById('modal-confirm').addEventListener('click', () => {
+      const modal = document.getElementById('custom-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      resetTest();
+    });
+
+    function resetTest() {
+      clearAllTimers();
+      state.screen = 'welcome';
+      state.startedAt = null;
+      state.finishedAt = null;
+      state.vciIndex = 0; state.vciAnswers = [];
+      state.priIndex = 0; state.priAnswers = [];
+      state.dsIndex = 0; state.dsPhase = 'ready'; state.dsInput = ''; state.dsAnswers = [];
+      state.arIndex = 0; state.arTimeLeft = 45; state.arAnswers = [];
+      state.ssTimeLeft = 40; state.ssStarted = false; state.ssCorrect = 0; state.ssWrong = 0; state.ssCurrent = null;
+      state.cdTimeLeft = 40; state.cdStarted = false; state.cdCorrect = 0; state.cdWrong = 0; state.cdQueue = [];
+      render();
+    }
+
+    // =========================================================================
+    // 4. 顶部进度条与阶段胶囊更新
+    // =========================================================================
+
+    function updateHeaderProgress() {
+      const wrap = document.getElementById('header-progress-wrap');
+      const barBg = document.getElementById('top-progress-bar-bg');
+      const bar = document.getElementById('top-progress-bar');
+      const pills = document.getElementById('header-step-pills');
+
+      if (state.screen === 'welcome' || state.screen === 'report') {
+        wrap.classList.add('hidden');
+        wrap.classList.remove('flex');
+        barBg.classList.add('hidden');
+        return;
+      }
+
+      wrap.classList.remove('hidden');
+      wrap.classList.add('flex');
+      barBg.classList.remove('hidden');
+
+      const stages = [
+        { id: 'vci', label: '1. 言语理解' },
+        { id: 'pri', label: '2. 知觉推理' },
+        { id: 'wmi', label: '3. 工作记忆' },
+        { id: 'psi', label: '4. 加工速度' }
+      ];
+
+      let activeStage = 'vci';
+      let pct = 0;
+      if (state.screen === 'vci') {
+        activeStage = 'vci';
+        pct = (state.vciIndex / VCI_QUESTIONS.length) * 25;
+      } else if (state.screen === 'pri') {
+        activeStage = 'pri';
+        pct = 25 + (state.priIndex / PRI_QUESTIONS.length) * 25;
+      } else if (['wmi_intro', 'digit_span', 'arithmetic'].includes(state.screen)) {
+        activeStage = 'wmi';
+        const wmiDone = state.dsAnswers.length + state.arAnswers.length;
+        pct = 50 + (wmiDone / (DIGIT_SPAN_TRIALS.length + ARITHMETIC_QUESTIONS.length)) * 25;
+      } else if (['psi_intro', 'symbol_search', 'coding'].includes(state.screen)) {
+        activeStage = 'psi';
+        let sub = 0;
+        if (state.screen === 'symbol_search') sub = ((40 - state.ssTimeLeft) / 40) * 12.5;
+        if (state.screen === 'coding') sub = 12.5 + ((40 - state.cdTimeLeft) / 40) * 12.5;
+        pct = 75 + sub;
+      }
+
+      bar.style.width = `${Math.min(100, Math.max(3, pct))}%`;
+
+      const stageOrder = ['vci', 'pri', 'wmi', 'psi'];
+      const curIdx = stageOrder.indexOf(activeStage);
+
+      pills.innerHTML = stages.map((st, i) => {
+        let cls = 'text-slate-400 bg-slate-100';
+        if (i < curIdx) cls = 'text-emerald-700 bg-emerald-50 border border-emerald-200';
+        if (i === curIdx) cls = 'text-indigo-700 bg-indigo-50 border border-indigo-200 font-semibold';
+        return `<span class="px-2.5 py-1 rounded-full ${cls}">${st.label}</span>`;
+      }).join('');
+    }
+
+    // =========================================================================
+    // 5. 各阶段视图渲染逻辑
+    // =========================================================================
+
+    function render() {
+      updateHeaderProgress();
+      const root = document.getElementById('app-root');
+
+      switch (state.screen) {
+        case 'welcome': renderWelcome(root); break;
+        case 'vci': renderVCI(root); break;
+        case 'pri': renderPRI(root); break;
+        case 'wmi_intro': renderWMIIntro(root); break;
+        case 'digit_span': renderDigitSpan(root); break;
+        case 'arithmetic': renderArithmetic(root); break;
+        case 'psi_intro': renderPSIIntro(root); break;
+        case 'symbol_search': renderSymbolSearch(root); break;
+        case 'coding': renderCoding(root); break;
+        case 'report': renderReport(root); break;
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ---------- 5.1 欢迎页 ----------
+    function renderWelcome(root) {
+      root.innerHTML = `
+        <div class="animate-fade-up space-y-6">
+          <!-- 顶部横幅卡片 -->
+          <div class="bg-white rounded-3xl p-6 sm:p-10 shadow-sm border border-slate-200/80 relative overflow-hidden">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-80 pointer-events-none"></div>
+            <div class="relative z-10">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-4">
+                <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                临床心理测量架构 · 均数 100 / 标准差 15
+              </div>
+              <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+                成人韦氏智商测试 <span class="text-indigo-600">(WAIS-IV 模拟版)</span>
+              </h1>
+              <p class="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl mb-6">
+                韦氏成人智力量表（WAIS）是全球临床心理学界公认的智力评估黄金标准。本系统完整复现了 WAIS-IV 的四大核心认知维度与交互测验机制，通过多维能力剖面估算您的全量表智商（FSIQ）。
+              </p>
+
+              <!-- 专业合规透明说明 -->
+              <div class="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4 text-xs sm:text-sm text-amber-900 leading-relaxed mb-8">
+                <strong class="font-semibold">测验说明：</strong> 官方临床版 WAIS-IV 原题受国际版权与心理测量保密协议严格保护（公开原题会导致临床诊断失效）。本测试采用严格遵循 WAIS-IV 认知构念与计分逻辑编写的<strong>高仿真原创标准化题目</strong>，全程约需 <strong>8–12 分钟</strong>，请在安静、无干扰的环境中独立完成（心算与记忆部分请勿使用纸笔）。
+              </div>
+
+              <!-- 四大指数卡片一览 -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-8">
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-start gap-3.5">
+                  <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">VCI</div>
+                  <div>
+                    <div class="font-bold text-slate-900 text-sm">言语理解指数</div>
+                    <div class="text-xs text-slate-500 mt-0.5">类同抽象归类、书面词汇与跨学科常识（6题 · 不限时）</div>
+                  </div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-start gap-3.5">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">PRI</div>
+                  <div>
+                    <div class="font-bold text-slate-900 text-sm">知觉推理指数</div>
+                    <div class="text-xs text-slate-500 mt-0.5">3×3 图形矩阵逻辑推理与天平代数推理（6题 · 不限时）</div>
+                  </div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-start gap-3.5">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0">WMI</div>
+                  <div>
+                    <div class="font-bold text-slate-900 text-sm">工作记忆指数</div>
+                    <div class="text-xs text-slate-500 mt-0.5">动态数字顺背/倒背/排序 + 限时多步心算（7题）</div>
+                  </div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-start gap-3.5">
+                  <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center shrink-0">PSI</div>
+                  <div>
+                    <div class="font-bold text-slate-900 text-sm">加工速度指数</div>
+                    <div class="text-xs text-slate-500 mt-0.5">40秒极速符号搜索 + 40秒数字符号编码（限时速测）</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 年龄组选择（模拟韦氏年龄常模校正）与开始按钮 -->
+              <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-4 border-t border-slate-100">
+                <div class="w-full sm:w-64">
+                  <label for="age-select" class="block text-xs font-semibold text-slate-600 mb-1.5">选择您的年龄常模组（用于反应速度校正）</label>
+                  <select id="age-select" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="16-19" ${state.ageGroup === '16-19' ? 'selected' : ''}>16 – 19 岁</option>
+                    <option value="20-29" ${state.ageGroup === '20-29' ? 'selected' : ''}>20 – 29 岁</option>
+                    <option value="30-44" ${state.ageGroup === '30-44' ? 'selected' : ''}>30 – 44 岁</option>
+                    <option value="45-59" ${state.ageGroup === '45-59' ? 'selected' : ''}>45 – 59 岁</option>
+                    <option value="60+" ${state.ageGroup === '60+' ? 'selected' : ''}>60 岁及以上</option>
+                  </select>
+                </div>
+
+                <button id="btn-start-test" type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-base shadow-md shadow-indigo-200 transition-all">
+                  <span>开始正式评估</span>
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('age-select').addEventListener('change', (e) => {
+        state.ageGroup = e.target.value;
+      });
+      document.getElementById('btn-start-test').addEventListener('click', () => {
+        state.startedAt = Date.now();
+        state.screen = 'vci';
+        render();
+      });
+    }
+
+    // ---------- 5.2 模块一：言语理解 (VCI) ----------
+    function renderVCI(root) {
+      const q = VCI_QUESTIONS[state.vciIndex];
+      root.innerHTML = `
+        <div class="animate-fade-up max-w-2xl mx-auto w-full">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
+              模块 1/4 · ${q.subtest}
+            </span>
+            <span class="text-xs font-semibold text-slate-500">
+              第 ${state.vciIndex + 1} / ${VCI_QUESTIONS.length} 题
+            </span>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80">
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 leading-snug mb-6">
+              ${q.prompt}
+            </h2>
+
+            <div class="space-y-3" id="vci-options">
+              ${q.options.map(opt => `
+                <button type="button" data-key="${opt.key}" class="vci-opt-btn w-full text-left p-4 rounded-2xl border-2 border-slate-200/80 hover:border-indigo-500 hover:bg-indigo-50/40 transition-all flex items-start gap-3.5 group">
+                  <span class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-indigo-600 group-hover:text-white text-slate-700 font-bold text-sm flex items-center justify-center shrink-0 transition-colors">
+                    ${opt.key}
+                  </span>
+                  <span class="text-sm sm:text-base text-slate-700 group-hover:text-slate-900 leading-relaxed pt-0.5">
+                    ${opt.text}
+                  </span>
+                </button>
+              `).join('')}
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between">
+              <span>提示：请选择抽象层级最高、最本质的答案</span>
+              <span>不限时作答</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.querySelectorAll('.vci-opt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-key');
+          const opt = q.options.find(o => o.key === key);
+          state.vciAnswers.push({
+            id: q.id,
+            key,
+            score: opt.score,
+            bestKey: q.bestKey
+          });
+          if (state.vciIndex + 1 < VCI_QUESTIONS.length) {
+            state.vciIndex++;
+            render();
+          } else {
+            state.screen = 'pri';
+            render();
+          }
+        });
+      });
+    }
+
+    // ---------- 5.3 模块二：知觉推理 (PRI) ----------
+    function renderPRI(root) {
+      const q = PRI_QUESTIONS[state.priIndex];
+      let visualHTML = '';
+      let optionsHTML = '';
+
+      if (q.kind === 'matrix') {
+        visualHTML = `
+          <div class="grid grid-cols-3 gap-2.5 sm:gap-3.5 max-w-[330px] mx-auto my-6 p-3.5 bg-slate-100/80 rounded-2xl border border-slate-200">
+            ${q.grid.map(cell => {
+              if (!cell) {
+                return `
+                  <div class="aspect-square rounded-xl bg-indigo-50 border-2 border-dashed border-indigo-400 flex items-center justify-center">
+                    <span class="text-3xl font-extrabold text-indigo-600">?</span>
+                  </div>
+                `;
+              }
+              return `
+                <div class="aspect-square rounded-xl bg-white border border-slate-200/90 shadow-xs p-1.5 flex items-center justify-center">
+                  ${renderMatrixCellSVG(q.cellType, cell)}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+
+        optionsHTML = `
+          <div class="grid grid-cols-5 gap-2 sm:gap-3 max-w-lg mx-auto">
+            ${q.options.map(opt => `
+              <button type="button" data-key="${opt.key}" class="pri-opt-btn flex flex-col items-center p-2 sm:p-2.5 rounded-2xl bg-white border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 hover:-translate-y-0.5 transition-all shadow-xs group">
+                <div class="w-full aspect-square mb-1.5">
+                  ${renderMatrixCellSVG(q.cellType, opt.params)}
+                </div>
+                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 group-hover:bg-indigo-600 group-hover:text-white text-slate-600 transition-colors">${opt.key}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      } else if (q.kind === 'weights') {
+        visualHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-6">
+            ${q.scales.map((sc, idx) => `
+              <div class="p-3.5 rounded-2xl ${sc.isQuestion ? 'bg-indigo-50/70 border-2 border-indigo-300' : 'bg-slate-50 border border-slate-200'} flex flex-col items-center justify-between">
+                <span class="text-[11px] font-bold ${sc.isQuestion ? 'text-indigo-700' : 'text-slate-500'} mb-1">
+                  ${sc.isQuestion ? '待求解天平' : `已知条件 ${idx + 1}`}
+                </span>
+                ${renderScaleSVG(sc.left, sc.right, sc.isQuestion)}
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        optionsHTML = `
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+            ${q.options.map(opt => `
+              <button type="button" data-key="${opt.key}" class="pri-opt-btn flex sm:flex-col items-center justify-between sm:justify-center gap-2 p-3 rounded-2xl bg-white border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 transition-all shadow-xs group">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 group-hover:bg-indigo-600 group-hover:text-white text-slate-600 transition-colors sm:order-2">${opt.key}</span>
+                <div class="flex-1 flex items-center justify-center sm:order-1">
+                  ${renderWeightOptionSVG(opt.items)}
+                </div>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      root.innerHTML = `
+        <div class="animate-fade-up max-w-3xl mx-auto w-full">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold">
+              模块 2/4 · ${q.subtest}
+            </span>
+            <span class="text-xs font-semibold text-slate-500">
+              第 ${state.priIndex + 1} / ${PRI_QUESTIONS.length} 题
+            </span>
+          </div>
+
+          <div class="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200/80">
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 leading-snug text-center">
+              ${q.prompt}
+            </h2>
+
+            ${visualHTML}
+
+            <div class="mt-6">
+              <div class="text-xs font-semibold text-slate-400 text-center mb-3">请点击选择正确答案</div>
+              ${optionsHTML}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.querySelectorAll('.pri-opt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-key');
+          state.priAnswers.push({
+            id: q.id,
+            key,
+            isCorrect: key === q.bestKey,
+            weight: q.weight,
+            bestKey: q.bestKey
+          });
+          if (state.priIndex + 1 < PRI_QUESTIONS.length) {
+            state.priIndex++;
+            render();
+          } else {
+            state.screen = 'wmi_intro';
+            render();
+          }
+        });
+      });
+    }
+
+    // ---------- 5.4 模块三引导页：工作记忆 (WMI) ----------
+    function renderWMIIntro(root) {
+      root.innerHTML = `
+        <div class="animate-fade-up max-w-xl mx-auto w-full">
+          <div class="bg-white rounded-3xl p-7 sm:p-10 shadow-sm border border-slate-200/80 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-5 font-extrabold text-lg">
+              WMI
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900 mb-3">模块 3：工作记忆测验</h2>
+            <p class="text-sm sm:text-base text-slate-600 leading-relaxed mb-6">
+              本模块包含<strong>数字广度（顺背、倒背、排序）</strong>与<strong>限时心算推理</strong>两部分，旨在评估您的大脑在短时间内暂存并加工信息的能力。
+            </p>
+            <div class="bg-slate-50 rounded-2xl p-4 text-left text-xs sm:text-sm text-slate-600 space-y-2 mb-8 border border-slate-200/70">
+              <div class="flex items-start gap-2"><span class="text-emerald-600 font-bold">•</span><span>请保持专注，数字广度每次仅播放一遍，<strong>不可重播</strong>。</span></div>
+              <div class="flex items-start gap-2"><span class="text-emerald-600 font-bold">•</span><span>请勿使用纸笔或计算器，完全依靠大脑记忆与心算完成。</span></div>
+            </div>
+            <button id="btn-start-wmi" type="button" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-md shadow-emerald-200 transition-all">
+              进入数字广度测验
+            </button>
+          </div>
+        </div>
+      `;
+      document.getElementById('btn-start-wmi').addEventListener('click', () => {
+        state.screen = 'digit_span';
+        state.dsPhase = 'ready';
+        state.dsInput = '';
+        render();
+      });
+    }
+
+    // ---------- 5.5 模块 3A：动态数字广度 (Digit Span) ----------
+    function renderDigitSpan(root) {
+      clearAllTimers();
+      const trial = DIGIT_SPAN_TRIALS[state.dsIndex];
+      const modeBadgeMap = {
+        forward: 'bg-blue-50 text-blue-700 border-blue-200',
+        backward: 'bg-purple-50 text-purple-700 border-purple-200',
+        sequencing: 'bg-amber-50 text-amber-800 border-amber-200'
+      };
+
+      let bodyHTML = '';
+      if (state.dsPhase === 'ready') {
+        bodyHTML = `
+          <div class="py-10 text-center">
+            <div class="w-20 h-20 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center mx-auto mb-5 text-slate-400">
+              <svg class="w-9 h-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p class="text-sm sm:text-base text-slate-700 max-w-md mx-auto mb-7 leading-relaxed">${trial.instruction}</p>
+            <button id="btn-play-digits" type="button" class="px-8 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-200 transition-all">
+              我准备好了，开始播放数字
+            </button>
+          </div>
+        `;
+      } else if (state.dsPhase === 'playing') {
+        bodyHTML = `
+          <div class="py-14 flex flex-col items-center justify-center">
+            <div class="text-xs font-semibold text-slate-400 mb-4 tracking-widest uppercase">请集中注意力记忆</div>
+            <div id="digit-display-box" class="w-36 h-36 rounded-3xl bg-slate-900 text-white flex items-center justify-center text-7xl font-extrabold shadow-inner">
+              <span class="text-2xl text-slate-400">准备...</span>
+            </div>
+            <div id="digit-dots" class="flex items-center gap-2 mt-6">
+              ${trial.sequence.split('').map((_, i) => `<span id="ds-dot-${i}" class="w-2.5 h-2.5 rounded-full bg-slate-200 transition-colors"></span>`).join('')}
+            </div>
+          </div>
+        `;
+      } else if (state.dsPhase === 'input') {
+        const modeHint = trial.mode === 'forward'
+          ? '按【原顺序】输入刚才的数字'
+          : trial.mode === 'backward'
+            ? '按【倒序（从后往前）】输入刚才的数字'
+            : '按【从小到大排序】输入刚才的数字';
+
+        bodyHTML = `
+          <div class="py-4 max-w-sm mx-auto text-center">
+            <div class="text-sm font-bold text-indigo-700 mb-3">${modeHint}</div>
+            <div class="relative mb-5">
+              <input id="ds-text-input" type="text" inputmode="numeric" maxlength="${trial.expected.length + 2}" value="${state.dsInput}" autocomplete="off" placeholder="请输入 ${trial.expected.length} 位数字"
+                class="w-full text-center text-3xl font-extrabold tracking-[0.35em] py-3.5 px-4 rounded-2xl border-2 border-indigo-300 focus:border-indigo-600 focus:outline-none bg-slate-50 text-slate-900" />
+            </div>
+
+            <!-- 触屏友好数字键盘 -->
+            <div class="grid grid-cols-3 gap-2.5 mb-5">
+              ${[1,2,3,4,5,6,7,8,9].map(n => `
+                <button type="button" data-num="${n}" class="ds-pad-btn py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-indigo-100 text-xl font-bold text-slate-800 transition-colors">${n}</button>
+              `).join('')}
+              <button type="button" id="ds-pad-clear" class="py-3.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-sm font-semibold text-slate-600 transition-colors">清空</button>
+              <button type="button" data-num="0" class="ds-pad-btn py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-indigo-100 text-xl font-bold text-slate-800 transition-colors">0</button>
+              <button type="button" id="ds-pad-back" class="py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm font-semibold text-slate-600 transition-colors">退格</button>
+            </div>
+
+            <button id="btn-submit-ds" type="button" class="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-200 transition-all">
+              确认提交
+            </button>
+          </div>
+        `;
+      }
+
+      root.innerHTML = `
+        <div class="animate-fade-up max-w-2xl mx-auto w-full">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 rounded-full border text-xs font-bold ${modeBadgeMap[trial.mode]}">
+              模块 3A · ${trial.title}
+            </span>
+            <span class="text-xs font-semibold text-slate-500">
+              第 ${state.dsIndex + 1} / ${DIGIT_SPAN_TRIALS.length} 组
+            </span>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80">
+            ${bodyHTML}
+          </div>
+        </div>
+      `;
+
+      // 事件绑定
+      if (state.dsPhase === 'ready') {
+        document.getElementById('btn-play-digits').addEventListener('click', () => {
+          state.dsPhase = 'playing';
+          render();
+        });
+      } else if (state.dsPhase === 'playing') {
+        const digits = trial.sequence.split('');
+        let idx = 0;
+        const showNext = () => {
+          const box = document.getElementById('digit-display-box');
+          if (!box) return;
+          if (idx < digits.length) {
+            box.innerHTML = `<span class="animate-digit inline-block">${digits[idx]}</span>`;
+            const dot = document.getElementById(`ds-dot-${idx}`);
+            if (dot) dot.classList.replace('bg-slate-200', 'bg-indigo-600');
+            idx++;
+            state.timers.push(setTimeout(showNext, 1000));
+          } else {
+            state.dsPhase = 'input';
+            state.dsInput = '';
+            render();
+          }
+        };
+        state.timers.push(setTimeout(showNext, 650));
+      } else if (state.dsPhase === 'input') {
+        const inp = document.getElementById('ds-text-input');
+        inp.focus();
+
+        const syncVal = (val) => {
+          const cleaned = val.replace(/\D/g, '').slice(0, trial.expected.length + 2);
+          state.dsInput = cleaned;
+          inp.value = cleaned;
+        };
+
+        inp.addEventListener('input', (e) => syncVal(e.target.value));
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') submitDigitSpan();
+        });
+
+        document.querySelectorAll('.ds-pad-btn').forEach(b => {
+          b.addEventListener('click', () => {
+            syncVal(state.dsInput + b.getAttribute('data-num'));
+            inp.focus();
+          });
+        });
+        document.getElementById('ds-pad-clear').addEventListener('click', () => {
+          syncVal('');
+          inp.focus();
+        });
+        document.getElementById('ds-pad-back').addEventListener('click', () => {
+          syncVal(state.dsInput.slice(0, -1));
+          inp.focus();
+        });
+        document.getElementById('btn-submit-ds').addEventListener('click', submitDigitSpan);
+      }
+    }
+
+    function submitDigitSpan() {
+      const trial = DIGIT_SPAN_TRIALS[state.dsIndex];
+      const cleaned = state.dsInput.trim();
+      let score = 0;
+      if (cleaned === trial.expected) {
+        score = trial.weight;
+      } else if (cleaned.length === trial.expected.length) {
+        // 仅 1 位偏差时给予少量部分分（反映部分记忆保持）
+        let diff = 0;
+        for (let i = 0; i < cleaned.length; i++) {
+          if (cleaned[i] !== trial.expected[i]) diff++;
+        }
+        if (diff === 1) score = trial.weight * 0.4;
+      }
+
+      state.dsAnswers.push({
+        id: trial.id,
+        title: trial.title,
+        sequence: trial.sequence,
+        input: cleaned || '(未输入)',
+        expected: trial.expected,
+        score,
+        maxScore: trial.weight
+      });
+
+      if (state.dsIndex + 1 < DIGIT_SPAN_TRIALS.length) {
+        state.dsIndex++;
+        state.dsPhase = 'ready';
+        state.dsInput = '';
+        render();
+      } else {
+        state.screen = 'arithmetic';
+        state.arIndex = 0;
+        render();
+      }
+    }
+
+    // ---------- 5.6 模块 3B：限时心算推理 (Arithmetic) ----------
+    function renderArithmetic(root) {
+      clearAllTimers();
+      const q = ARITHMETIC_QUESTIONS[state.arIndex];
+      state.arTimeLeft = q.timeLimit;
+
+      root.innerHTML = `
+        <div class="animate-fade-up max-w-2xl mx-auto w-full">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+              模块 3B · 限时心算推理 (Arithmetic)
+            </span>
+            <div class="flex items-center gap-3">
+              <span id="ar-timer-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold tabular-nums">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="ar-timer-text">${state.arTimeLeft}s</span>
+              </span>
+              <span class="text-xs font-semibold text-slate-500">第 ${state.arIndex + 1} / ${ARITHMETIC_QUESTIONS.length} 题</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80">
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 leading-relaxed mb-7">
+              ${q.prompt}
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              ${q.options.map(opt => `
+                <button type="button" data-key="${opt.key}" class="ar-opt-btn p-4 rounded-2xl border-2 border-slate-200/80 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all flex items-center gap-3.5 group text-left">
+                  <span class="w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-emerald-600 group-hover:text-white text-slate-700 font-bold text-sm flex items-center justify-center shrink-0 transition-colors">
+                    ${opt.key}
+                  </span>
+                  <span class="text-base font-semibold text-slate-800">${opt.text}</span>
+                </button>
+              `).join('')}
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
+              要求：请完全通过心算得出结果，倒计时结束将自动进入下一题。
+            </div>
+          </div>
+        </div>
+      `;
+
+      const recordAr = (key, timedOut = false) => {
+        clearAllTimers();
+        state.arAnswers.push({
+          id: q.id,
+          key: key || '超时未答',
+          isCorrect: key === q.bestKey,
+          weight: q.weight,
+          bestKey: q.bestKey,
+          timedOut
+        });
+        if (state.arIndex + 1 < ARITHMETIC_QUESTIONS.length) {
+          state.arIndex++;
+          render();
+        } else {
+          state.screen = 'psi_intro';
+          render();
+        }
+      };
+
+      document.querySelectorAll('.ar-opt-btn').forEach(btn => {
+        btn.addEventListener('click', () => recordAr(btn.getAttribute('data-key'), false));
+      });
+
+      const timer = setInterval(() => {
+        state.arTimeLeft--;
+        const tText = document.getElementById('ar-timer-text');
+        const tBadge = document.getElementById('ar-timer-badge');
+        if (tText) tText.textContent = `${state.arTimeLeft}s`;
+        if (state.arTimeLeft <= 10 && tBadge) {
+          tBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold tabular-nums animate-pulse';
+        }
+        if (state.arTimeLeft <= 0) {
+          recordAr(null, true);
+        }
+      }, 1000);
+      state.timers.push(timer);
+    }
+
+    // ---------- 5.7 模块四引导页：加工速度 (PSI) ----------
+    function renderPSIIntro(root) {
+      clearAllTimers();
+      root.innerHTML = `
+        <div class="animate-fade-up max-w-xl mx-auto w-full">
+          <div class="bg-white rounded-3xl p-7 sm:p-10 shadow-sm border border-slate-200/80 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-5 font-extrabold text-lg">
+              PSI
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900 mb-3">模块 4：加工速度速测</h2>
+            <p class="text-sm sm:text-base text-slate-600 leading-relaxed mb-6">
+              这是最后一个模块！包含两项经典的 <strong>40 秒极速反应测验</strong>：<strong>符号搜索</strong>与<strong>数字符号编码</strong>，全面衡量您的视觉扫描速度、瞬时配对效率与手眼协调能力。
+            </p>
+            <div class="bg-amber-50/70 rounded-2xl p-4 text-left text-xs sm:text-sm text-amber-900 space-y-2 mb-8 border border-amber-200/80">
+              <div class="flex items-start gap-2"><span class="font-bold">1.</span><span><strong>兼顾速度与准确率：</strong> 采用真实 WAIS 净分机制（净分 = 答对数 − 答错数），盲目乱点会扣分。</span></div>
+              <div class="flex items-start gap-2"><span class="font-bold">2.</span><span><strong>快捷操作：</strong> 支持鼠标/触屏点击，电脑端也支持键盘快捷键以获得最佳速度表现。</span></div>
+            </div>
+            <button id="btn-start-psi" type="button" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-base shadow-md shadow-amber-200 transition-all">
+              开始第 1 项：符号搜索 (40秒)
+            </button>
+          </div>
+        </div>
+      `;
+      document.getElementById('btn-start-psi').addEventListener('click', () => {
+        state.screen = 'symbol_search';
+        state.ssTimeLeft = 40;
+        state.ssCorrect = 0;
+        state.ssWrong = 0;
+        state.ssStarted = false;
+        generateNextSymbolSearchItem();
+        render();
+      });
+    }
+
+    // ---------- 5.8 模块 4A：符号搜索 (Symbol Search - 40秒) ----------
+    function generateNextSymbolSearchItem() {
+      const poolAll = Array.from({ length: PSI_SYMBOLS.length }, (_, i) => i);
+      // Fisher-Yates 洗牌
+      for (let i = poolAll.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [poolAll[i], poolAll[j]] = [poolAll[j], poolAll[i]];
+      }
+      const targets = [poolAll[0], poolAll[1]];
+      const hasMatch = Math.random() < 0.5;
+      let searchSet = [];
+
+      if (hasMatch) {
+        const matchedTarget = targets[Math.random() < 0.5 ? 0 : 1];
+        searchSet = [matchedTarget, poolAll[2], poolAll[3], poolAll[4], poolAll[5]];
+      } else {
+        searchSet = [poolAll[2], poolAll[3], poolAll[4], poolAll[5], poolAll[6]];
+      }
+      // 打乱右侧搜索池顺序
+      for (let i = searchSet.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [searchSet[i], searchSet[j]] = [searchSet[j], searchSet[i]];
+      }
+      state.ssCurrent = { targets, searchSet, hasMatch };
+    }
+
+    function renderSymbolSearch(root) {
+      clearAllTimers();
+
+      if (!state.ssStarted) {
+        root.innerHTML = `
+          <div class="animate-fade-up max-w-2xl mx-auto w-full">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 text-center">
+              <span class="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold mb-4">模块 4A · 符号搜索 (Symbol Search)</span>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-3">判断左侧目标符号是否出现在右侧</h2>
+              <p class="text-sm text-slate-600 max-w-lg mx-auto mb-6 leading-relaxed">
+                每题左侧显示 <strong>2 个目标符号</strong>，右侧显示 <strong>5 个搜索符号</strong>。只要左侧任意一个目标符号出现在右侧，就选<strong>「有」</strong>；否则选<strong>「无」</strong>。限时 40 秒，越快越准越好！
+              </p>
+              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 max-w-md mx-auto mb-7">
+                <div class="text-xs text-slate-500 mb-2 font-medium">操作提示（支持键盘快捷键）</div>
+                <div class="flex items-center justify-center gap-4 text-xs font-semibold">
+                  <span class="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800">有：点击「有」或按 F / ←</span>
+                  <span class="px-3 py-1.5 rounded-lg bg-rose-100 text-rose-800">无：点击「无」或按 J / →</span>
+                </div>
+              </div>
+              <button id="btn-go-ss" type="button" class="px-10 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-200 transition-all">
+                开始 40 秒倒计时
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-go-ss').addEventListener('click', () => {
+          state.ssStarted = true;
+          render();
+        });
+        return;
+      }
+
+      root.innerHTML = `
+        <div class="max-w-2xl mx-auto w-full">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+              符号搜索 (Symbol Search)
+            </span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-semibold text-slate-500">已答对：<strong id="ss-score-ok" class="text-emerald-600 text-sm">${state.ssCorrect}</strong></span>
+              <span id="ss-timer-pill" class="px-3.5 py-1 rounded-full bg-slate-900 text-white text-sm font-extrabold tabular-nums">
+                ${state.ssTimeLeft}s
+              </span>
+            </div>
+          </div>
+
+          <div id="ss-card" class="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border-2 border-slate-200/80 transition-colors">
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 my-4">
+              <!-- 目标组 -->
+              <div class="flex flex-col items-center">
+                <div class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-2">目标符号 (2个)</div>
+                <div id="ss-targets-box" class="flex items-center gap-2.5 p-3 rounded-2xl bg-indigo-50/80 border-2 border-indigo-200 text-indigo-900"></div>
+              </div>
+
+              <div class="text-slate-300 font-bold hidden sm:block">→</div>
+
+              <!-- 搜索组 -->
+              <div class="flex flex-col items-center w-full sm:w-auto">
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">搜索组 (5个)</div>
+                <div id="ss-pool-box" class="grid grid-cols-5 gap-1.5 sm:gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 w-full sm:w-auto justify-items-center"></div>
+              </div>
+            </div>
+
+            <!-- 响应按钮 -->
+            <div class="grid grid-cols-2 gap-3.5 mt-8">
+              <button id="btn-ss-yes" type="button" class="py-4 sm:py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-extrabold text-lg shadow-sm transition-all flex flex-col items-center">
+                <span>有（包含）</span>
+                <span class="text-[11px] font-medium text-emerald-100 mt-0.5 hidden sm:inline">快捷键 F 或 ←</span>
+              </button>
+              <button id="btn-ss-no" type="button" class="py-4 sm:py-5 rounded-2xl bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white font-extrabold text-lg shadow-sm transition-all flex flex-col items-center">
+                <span>无（不含）</span>
+                <span class="text-[11px] font-medium text-slate-300 mt-0.5 hidden sm:inline">快捷键 J 或 →</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const paintSSItem = () => {
+        const tBox = document.getElementById('ss-targets-box');
+        const pBox = document.getElementById('ss-pool-box');
+        if (!tBox || !pBox) return;
+        tBox.innerHTML = state.ssCurrent.targets.map(idx => `
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white border border-indigo-200 flex items-center justify-center shadow-2xs">
+            ${renderPSISymbolSVG(idx, 'w-9 h-9 sm:w-10 sm:h-10')}
+          </div>
+        `).join('');
+        pBox.innerHTML = state.ssCurrent.searchSet.map(idx => `
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+            ${renderPSISymbolSVG(idx, 'w-9 h-9 sm:w-10 sm:h-10')}
+          </div>
+        `).join('');
+      };
+
+      paintSSItem();
+
+      const handleSSAnswer = (userSaysYes) => {
+        if (state.screen !== 'symbol_search' || !state.ssStarted) return;
+        const isCorrect = userSaysYes === state.ssCurrent.hasMatch;
+        const card = document.getElementById('ss-card');
+        if (isCorrect) {
+          state.ssCorrect++;
+          if (card) {
+            card.classList.add('border-emerald-400');
+            setTimeout(() => card.classList.remove('border-emerald-400'), 140);
+          }
+        } else {
+          state.ssWrong++;
+          if (card) {
+            card.classList.add('border-rose-400');
+            setTimeout(() => card.classList.remove('border-rose-400'), 180);
+          }
+        }
+        const okEl = document.getElementById('ss-score-ok');
+        if (okEl) okEl.textContent = state.ssCorrect;
+        generateNextSymbolSearchItem();
+        paintSSItem();
+      };
+
+      document.getElementById('btn-ss-yes').addEventListener('click', () => handleSSAnswer(true));
+      document.getElementById('btn-ss-no').addEventListener('click', () => handleSSAnswer(false));
+
+      const onKey = (e) => {
+        if (state.screen !== 'symbol_search' || !state.ssStarted) {
+          window.removeEventListener('keydown', onKey);
+          return;
+        }
+        if (e.key === 'f' || e.key === 'F' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handleSSAnswer(true);
+        } else if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleSSAnswer(false);
+        }
+      };
+      window.addEventListener('keydown', onKey);
+
+      const timer = setInterval(() => {
+        state.ssTimeLeft--;
+        const pill = document.getElementById('ss-timer-pill');
+        if (pill) {
+          pill.textContent = `${state.ssTimeLeft}s`;
+          if (state.ssTimeLeft <= 8) pill.classList.replace('bg-slate-900', 'bg-rose-600');
+        }
+        updateHeaderProgress();
+        if (state.ssTimeLeft <= 0) {
+          clearAllTimers();
+          window.removeEventListener('keydown', onKey);
+          // 进入数字符号编码
+          state.screen = 'coding';
+          state.cdTimeLeft = 40;
+          state.cdCorrect = 0;
+          state.cdWrong = 0;
+          state.cdStarted = false;
+          initCodingQueue();
+          render();
+        }
+      }, 1000);
+      state.timers.push(timer);
+    }
+
+    // ---------- 5.9 模块 4B：数字符号编码 (Coding - 40秒) ----------
+    function initCodingQueue() {
+      // 固定挑选 9 个最清晰易辨识的符号映射到数字 1..9
+      state.cdKeyMap = [0, 2, 4, 5, 6, 7, 10, 11, 14];
+      state.cdQueue = [];
+      for (let i = 0; i < 6; i++) {
+        state.cdQueue.push(Math.floor(Math.random() * 9) + 1);
+      }
+    }
+
+    function pushNextCodingDigit() {
+      let next = Math.floor(Math.random() * 9) + 1;
+      // 避免连续出现完全相同的符号导致误以为没刷新
+      if (state.cdQueue.length > 0 && next === state.cdQueue[state.cdQueue.length - 1]) {
+        next = (next % 9) + 1;
+      }
+      state.cdQueue.push(next);
+    }
+
+    function renderCoding(root) {
+      clearAllTimers();
+
+      if (!state.cdStarted) {
+        root.innerHTML = `
+          <div class="animate-fade-up max-w-2xl mx-auto w-full">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 text-center">
+              <span class="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold mb-4">模块 4B · 数字符号编码 (Coding)</span>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-3">对照密码表，快速译出目标符号对应的数字</h2>
+              <p class="text-sm text-slate-600 max-w-lg mx-auto mb-6 leading-relaxed">
+                页面上方会始终展示 <strong>1–9 的数字符号对照表</strong>。中央将连续出现待译码符号，请迅速点击或按键盘数字键 <strong>1–9</strong> 输入对应数字。限时 40 秒，这是最后一项测验！
+              </p>
+              <button id="btn-go-cd" type="button" class="px-10 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-md shadow-indigo-200 transition-all">
+                开始最后 40 秒冲刺
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-go-cd').addEventListener('click', () => {
+          state.cdStarted = true;
+          render();
+        });
+        return;
+      }
+
+      root.innerHTML = `
+        <div class="max-w-2xl mx-auto w-full">
+          <div class="flex items-center justify-between mb-3">
+            <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+              数字符号编码 (Coding)
+            </span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-semibold text-slate-500">已译码：<strong id="cd-score-ok" class="text-emerald-600 text-sm">${state.cdCorrect}</strong></span>
+              <span id="cd-timer-pill" class="px-3.5 py-1 rounded-full bg-slate-900 text-white text-sm font-extrabold tabular-nums">
+                ${state.cdTimeLeft}s
+              </span>
+            </div>
+          </div>
+
+          <div id="cd-card" class="bg-white rounded-3xl p-4 sm:p-7 shadow-sm border-2 border-slate-200/80 transition-colors">
+            <!-- 顶部 1-9 对照密码表 -->
+            <div class="mb-5">
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">标准对照密码表 (1 – 9)</div>
+              <div class="grid grid-cols-9 gap-1 sm:gap-1.5 bg-slate-100 p-1.5 sm:p-2 rounded-2xl border border-slate-200">
+                ${state.cdKeyMap.map((symIdx, idx) => `
+                  <div class="flex flex-col items-center bg-white rounded-xl py-1.5 px-0.5 border border-slate-200/80">
+                    <span class="text-xs sm:text-sm font-extrabold text-indigo-700 leading-none mb-1">${idx + 1}</span>
+                    <div class="text-slate-800">${renderPSISymbolSVG(symIdx, 'w-6 h-6 sm:w-8 sm:h-8')}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- 当前待译码符号与后续预告 -->
+            <div class="flex items-center justify-center gap-3 sm:gap-4 my-5" id="cd-queue-view"></div>
+
+            <!-- 1-9 快捷输入键盘 -->
+            <div class="grid grid-cols-3 sm:grid-cols-9 gap-2 mt-5">
+              ${[1,2,3,4,5,6,7,8,9].map(n => `
+                <button type="button" data-digit="${n}" class="cd-num-btn py-3.5 sm:py-4 rounded-xl bg-slate-100 hover:bg-indigo-600 hover:text-white active:scale-95 text-lg sm:text-xl font-extrabold text-slate-800 transition-all border border-slate-200/80">
+                  ${n}
+                </button>
+              `).join('')}
+            </div>
+            <div class="text-center text-[11px] text-slate-400 mt-3 hidden sm:block">提示：直接使用键盘数字键 1–9 输入速度更快</div>
+          </div>
+        </div>
+      `;
+
+      const paintQueue = () => {
+        const qView = document.getElementById('cd-queue-view');
+        if (!qView) return;
+        const currentDigit = state.cdQueue[0];
+        const next1 = state.cdQueue[1];
+        const next2 = state.cdQueue[2];
+
+        qView.innerHTML = `
+          <div class="flex flex-col items-center">
+            <span class="text-[11px] font-bold text-indigo-600 mb-1.5">当前目标</span>
+            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-indigo-50 border-2 border-indigo-500 text-indigo-950 flex items-center justify-center shadow-sm">
+              ${renderPSISymbolSVG(state.cdKeyMap[currentDigit - 1], 'w-14 h-14 sm:w-16 sm:h-16')}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-5 opacity-45">
+            <div class="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+              ${renderPSISymbolSVG(state.cdKeyMap[next1 - 1], 'w-8 h-8')}
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+              ${renderPSISymbolSVG(state.cdKeyMap[next2 - 1], 'w-7 h-7')}
+            </div>
+          </div>
+        `;
+      };
+
+      paintQueue();
+
+      const handleCodingInput = (num) => {
+        if (state.screen !== 'coding' || !state.cdStarted) return;
+        const target = state.cdQueue[0];
+        const card = document.getElementById('cd-card');
+        if (num === target) {
+          state.cdCorrect++;
+          if (card) {
+            card.classList.add('border-emerald-400');
+            setTimeout(() => card.classList.remove('border-emerald-400'), 120);
+          }
+        } else {
+          state.cdWrong++;
+          if (card) {
+            card.classList.add('border-rose-400');
+            setTimeout(() => card.classList.remove('border-rose-400'), 160);
+          }
+        }
+        const okEl = document.getElementById('cd-score-ok');
+        if (okEl) okEl.textContent = state.cdCorrect;
+        state.cdQueue.shift();
+        pushNextCodingDigit();
+        paintQueue();
+      };
+
+      document.querySelectorAll('.cd-num-btn').forEach(btn => {
+        btn.addEventListener('click', () => handleCodingInput(parseInt(btn.getAttribute('data-digit'), 10)));
+      });
+
+      const onKey = (e) => {
+        if (state.screen !== 'coding' || !state.cdStarted) {
+          window.removeEventListener('keydown', onKey);
+          return;
+        }
+        if (e.key >= '1' && e.key <= '9') {
+          e.preventDefault();
+          handleCodingInput(parseInt(e.key, 10));
+        }
+      };
+      window.addEventListener('keydown', onKey);
+
+      const timer = setInterval(() => {
+        state.cdTimeLeft--;
+        const pill = document.getElementById('cd-timer-pill');
+        if (pill) {
+          pill.textContent = `${state.cdTimeLeft}s`;
+          if (state.cdTimeLeft <= 8) pill.classList.replace('bg-slate-900', 'bg-rose-600');
+        }
+        updateHeaderProgress();
+        if (state.cdTimeLeft <= 0) {
+          clearAllTimers();
+          window.removeEventListener('keydown', onKey);
+          state.finishedAt = Date.now();
+          state.screen = 'report';
+          render();
+        }
+      }, 1000);
+      state.timers.push(timer);
+    }
+
+    // =========================================================================
+    // 6. 心理测量常模换算引擎 (WAIS-IV 标准分与正态分布算法)
+    // =========================================================================
+
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    // 标准正态分布累积分布函数 (Abramowitz & Stegun 高精度近似)
+    function normalCDF(z) {
+      const t = 1 / (1 + 0.2316419 * Math.abs(z));
+      const d = 0.3989423 * Math.exp((-z * z) / 2);
+      const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+      return z > 0 ? 1 - prob : prob;
+    }
+
+    // WAIS-IV 中文常模智力等级划分标准
+    function getWAISClassification(iq) {
+      if (iq >= 130) return { label: '极超常 (Very Superior)', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' };
+      if (iq >= 120) return { label: '超常 (Superior)', color: 'text-blue-700 bg-blue-50 border-blue-200' };
+      if (iq >= 110) return { label: '高于平常 (High Average)', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+      if (iq >= 90) return { label: '平常 (Average)', color: 'text-slate-700 bg-slate-100 border-slate-200' };
+      if (iq >= 80) return { label: '低于平常 (Low Average)', color: 'text-amber-800 bg-amber-50 border-amber-200' };
+      if (iq >= 70) return { label: '边界水平 (Borderline)', color: 'text-orange-800 bg-orange-50 border-orange-200' };
+      return { label: '有待评估参考', color: 'text-rose-700 bg-rose-50 border-rose-200' };
+    }
+
+    function computeScores() {
+      // 1. VCI (原始满分 12 分)
+      const vciRaw = state.vciAnswers.reduce((s, a) => s + a.score, 0);
+      const vciRatio = vciRaw / 12;
+      // 非线性映射：55% 正确率约对应常模 100，满分对应 138
+      const VCI = clamp(Math.round(68 + Math.pow(vciRatio, 1.15) * 70), 68, 140);
+
+      // 2. PRI (原始加权满分 12 分)
+      const priRaw = state.priAnswers.reduce((s, a) => s + (a.isCorrect ? a.weight : 0), 0);
+      const priRatio = priRaw / 12;
+      const PRI = clamp(Math.round(68 + Math.pow(priRatio, 1.12) * 74), 68, 142);
+
+      // 3. WMI (数字广度 9 分 + 心算 5 分 = 14 分)
+      const dsRaw = state.dsAnswers.reduce((s, a) => s + a.score, 0);
+      const arRaw = state.arAnswers.reduce((s, a) => s + (a.isCorrect ? a.weight : 0), 0);
+      const wmiRaw = dsRaw + arRaw;
+      const wmiRatio = wmiRaw / 14;
+      const WMI = clamp(Math.round(68 + Math.pow(wmiRatio, 1.1) * 74), 68, 142);
+
+      // 4. PSI (符号搜索净分 + 编码净分，并应用年龄常模校正)
+      const ageFactors = { '16-19': 1.00, '20-29': 1.00, '30-44': 1.05, '45-59': 1.13, '60+': 1.24 };
+      const factor = ageFactors[state.ageGroup] || 1.00;
+      const ssNet = Math.max(0, state.ssCorrect - state.ssWrong);
+      const cdNet = Math.max(0, state.cdCorrect - state.cdWrong);
+      const psiWeighted = (ssNet * 1.15 + cdNet) * factor;
+      // 40s*2 基准：成人均值约为 34 净分 -> 100，每 ±10 净分约 ±15 IQ
+      const PSI = clamp(Math.round(100 + (psiWeighted - 34) * 1.45), 68, 145);
+
+      // 5. 全量表估计智商 (FSIQ) 及 GAI / CPI 临床辅助指标
+      const avg4 = (VCI + PRI + WMI + PSI) / 4;
+      // 多维正相关复合增益系数 1.10
+      const FSIQ = clamp(Math.round(100 + (avg4 - 100) * 1.10), 65, 145);
+      const GAI = clamp(Math.round(100 + (((VCI + PRI) / 2) - 100) * 1.06), 65, 145); // 一般能力指数
+      const CPI = clamp(Math.round(100 + (((WMI + PSI) / 2) - 100) * 1.06), 65, 145); // 认知效率指数
+
+      const zScore = (FSIQ - 100) / 15;
+      const percentile = clamp(+(normalCDF(zScore) * 100).toFixed(1), 0.1, 99.9);
+      const classification = getWAISClassification(FSIQ);
+
+      return {
+        VCI, PRI, WMI, PSI, FSIQ, GAI, CPI,
+        percentile,
+        classification,
+        raw: { vciRaw, priRaw, wmiRaw, ssNet, cdNet, ssCorrect: state.ssCorrect, ssWrong: state.ssWrong, cdCorrect: state.cdCorrect, cdWrong: state.cdWrong }
+      };
+    }
+
+    // 绘制标准正态分布钟形曲线 SVG (μ=100, σ=15)
+    function renderBellCurveSVG(iq) {
+      const width = 460;
+      const height = 165;
+      const padX = 28;
+      const baseY = 132;
+      const usableW = width - padX * 2;
+
+      // X 轴范围：55 到 145 (μ ± 3σ)
+      const iqToX = (val) => padX + ((clamp(val, 55, 145) - 55) / 90) * usableW;
+      const pdfY = (val) => {
+        const z = (val - 100) / 15;
+        const density = Math.exp(-0.5 * z * z);
+        return baseY - density * 96;
+      };
+
+      let fullPath = `M ${iqToX(55)} ${baseY} `;
+      let shadedPath = `M ${iqToX(55)} ${baseY} `;
+      const clampedIQ = clamp(iq, 55, 145);
+
+      for (let v = 55; v <= 145; v += 1) {
+        const x = iqToX(v).toFixed(1);
+        const y = pdfY(v).toFixed(1);
+        fullPath += `L ${x} ${y} `;
+        if (v <= clampedIQ) shadedPath += `L ${x} ${y} `;
+      }
+      fullPath += `L ${iqToX(145)} ${baseY} Z`;
+      shadedPath += `L ${iqToX(clampedIQ).toFixed(1)} ${baseY} Z`;
+
+      const userX = iqToX(clampedIQ);
+      const userY = pdfY(clampedIQ);
+      const ticks = [70, 85, 100, 115, 130];
+
+      return `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
+          <defs>
+            <linearGradient id="bellGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.38" />
+              <stop offset="100%" stop-color="#4f46e5" stop-opacity="0.06" />
+            </linearGradient>
+          </defs>
+          <!-- 完整曲线底色 -->
+          <path d="${fullPath}" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5" />
+          <!-- 超越人群阴影区域 -->
+          <path d="${shadedPath}" fill="url(#bellGrad)" />
+          <!-- 曲线轮廓 -->
+          <path d="${fullPath.replace(`L ${iqToX(145)} ${baseY} Z`, '')}" fill="none" stroke="#64748b" stroke-width="2" />
+          <!-- 均值虚线 -->
+          <line x1="${iqToX(100)}" y1="34" x2="${iqToX(100)}" y2="${baseY}" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4 3" />
+          <!-- X轴 -->
+          <line x1="${padX}" y1="${baseY}" x2="${width - padX}" y2="${baseY}" stroke="#94a3b8" stroke-width="1.5" />
+          <!-- 刻度 -->
+          ${ticks.map(t => `
+            <line x1="${iqToX(t)}" y1="${baseY}" x2="${iqToX(t)}" y2="${baseY + 5}" stroke="#64748b" stroke-width="1.2" />
+            <text x="${iqToX(t)}" y="${baseY + 19}" text-anchor="middle" font-size="11" font-weight="${t === 100 ? '700' : '500'}" fill="${t === 100 ? '#334155' : '#64748b'}">${t}</text>
+          `).join('')}
+          <!-- 用户位置标记线与圆点 -->
+          <line x1="${userX}" y1="${userY}" x2="${userX}" y2="${baseY}" stroke="#4338ca" stroke-width="2.5" />
+          <circle cx="${userX}" cy="${userY}" r="5.5" fill="#4338ca" stroke="#ffffff" stroke-width="2" />
+          <rect x="${clamp(userX - 38, 12, width - 88)}" y="${Math.max(4, userY - 28)}" width="76" height="20" rx="6" fill="#3730a3" />
+          <text x="${clamp(userX, 50, width - 50)}" y="${Math.max(18, userY - 14)}" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">您: ${iq}</text>
+        </svg>
+      `;
+    }
+
+    // 绘制四大认知指数雷达图 SVG
+    function renderRadarSVG(scores) {
+      const cx = 130, cy = 120, maxR = 82;
+      const axes = [
+        { key: 'VCI', label: '言语理解', val: scores.VCI, angle: -90 },
+        { key: 'PRI', label: '知觉推理', val: scores.PRI, angle: 0 },
+        { key: 'WMI', label: '工作记忆', val: scores.WMI, angle: 90 },
+        { key: 'PSI', label: '加工速度', val: scores.PSI, angle: 180 },
+      ];
+      const toPt = (val, deg) => {
+        // 55 -> 0, 145 -> maxR
+        const r = (clamp(val - 55, 0, 90) / 90) * maxR;
+        const rad = (deg * Math.PI) / 180;
+        return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+      };
+
+      const rings = [85, 100, 115, 130, 145];
+      const polyPts = axes.map(a => toPt(a.val, a.angle).map(n => n.toFixed(1)).join(',')).join(' ');
+
+      return `
+        <svg viewBox="0 0 260 240" class="w-full max-w-[260px] h-auto mx-auto">
+          <!-- 同心菱形参考网格 -->
+          ${rings.map(rVal => {
+            const pts = axes.map(a => toPt(rVal, a.angle).map(n => n.toFixed(1)).join(',')).join(' ');
+            const isMean = rVal === 100;
+            return `<polygon points="${pts}" fill="none" stroke="${isMean ? '#94a3b8' : '#e2e8f0'}" stroke-width="${isMean ? '1.6' : '1'}" stroke-dasharray="${isMean ? '3 3' : 'none'}" />`;
+          }).join('')}
+          <!-- 轴线 -->
+          ${axes.map(a => {
+            const [x, y] = toPt(145, a.angle);
+            return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#cbd5e1" stroke-width="1" />`;
+          }).join('')}
+          <!-- 得分多边形 -->
+          <polygon points="${polyPts}" fill="rgba(79,70,229,0.22)" stroke="#4338ca" stroke-width="2.5" stroke-linejoin="round" />
+          <!-- 顶点圆点与标签 -->
+          ${axes.map(a => {
+            const [px, py] = toPt(a.val, a.angle);
+            const [lx, ly] = toPt(162, a.angle);
+            return `
+              <circle cx="${px}" cy="${py}" r="4.5" fill="#4338ca" stroke="#fff" stroke-width="1.8" />
+              <text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">${a.label}</text>
+              <text x="${lx}" y="${ly + 17}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#4f46e5">${a.val}</text>
+            `;
+          }).join('')}
+        </svg>
+      `;
+    }
+
+    // 生成个性化认知特征临床解读文本
+    function generateCognitiveInsight(sc) {
+      const dims = [
+        { name: '言语理解 (VCI)', val: sc.VCI },
+        { name: '知觉推理 (PRI)', val: sc.PRI },
+        { name: '工作记忆 (WMI)', val: sc.WMI },
+        { name: '加工速度 (PSI)', val: sc.PSI },
+      ].sort((a, b) => b.val - a.val);
+
+      const best = dims[0];
+      const lowest = dims[3];
+      const gap = sc.GAI - sc.CPI;
+      let gaiCpiText = '';
+
+      if (gap >= 12) {
+        gaiCpiText = `您的一般能力指数（GAI = ${sc.GAI}）显著高于认知效率指数（CPI = ${sc.CPI}），呈现出<strong>「深度思考优势型」</strong>认知剖面：您在高阶抽象理解与复杂推理上具备明显优势，而在高压限时操作或机械记忆速度上相对克制。在需要深度策略、逻辑分析与非限时决策的领域更具潜能。`;
+      } else if (gap <= -12) {
+        gaiCpiText = `您的认知效率指数（CPI = ${sc.CPI}）显著高于一般能力指数（GAI = ${sc.GAI}），呈现出<strong>「敏锐执行优势型」</strong>认知剖面：您的大脑信息吞吐带宽、瞬间记忆容量与视觉加工敏捷度极为出色，适合快节奏、高信息密度的实时反应与多任务处理场景。`;
+      } else {
+        gaiCpiText = `您的一般能力指数（GAI = ${sc.GAI}）与认知效率指数（CPI = ${sc.CPI}）高度均衡，呈现<strong>「全面协调型」</strong>认知结构：抽象推理深度与大脑实时加工效率相辅相成，综合适应能力非常稳定。`;
+      }
+
+      return `
+        <p class="mb-2.5">${gaiCpiText}</p>
+        <p>在四大分项中，您的相对认知强项为 <strong>${best.name}（${best.val} 分）</strong>；相对最具提升空间的维度为 <strong>${lowest.name}（${lowest.val} 分）</strong>。若测试时处于疲劳状态或首次接触限时操作，加工速度与工作记忆分数可能会略低于您的最佳水平。</p>
+      `;
+    }
+
+    // ---------- 5.10 综合临床评估报告页 ----------
+    function renderReport(root) {
+      const sc = computeScores();
+      const durationSec = state.startedAt && state.finishedAt ? Math.max(1, Math.round((state.finishedAt - state.startedAt) / 1000)) : 0;
+      const durMin = Math.floor(durationSec / 60);
+      const durRemSec = durationSec % 60;
+      const ciLow = Math.max(60, sc.FSIQ - 4);
+      const ciHigh = Math.min(150, sc.FSIQ + 4);
+
+      const indexList = [
+        { code: 'VCI', name: '言语理解指数', score: sc.VCI, color: 'bg-blue-600', detail: `类同与词汇常识得分 ${sc.raw.vciRaw} / 12` },
+        { code: 'PRI', name: '知觉推理指数', score: sc.PRI, color: 'bg-indigo-600', detail: `矩阵与天平加权得分 ${sc.raw.priRaw.toFixed(1)} / 12` },
+        { code: 'WMI', name: '工作记忆指数', score: sc.WMI, color: 'bg-emerald-600', detail: `数字广度与心算得分 ${sc.raw.wmiRaw.toFixed(1)} / 14` },
+        { code: 'PSI', name: '加工速度指数', score: sc.PSI, color: 'bg-amber-500', detail: `符号搜索净分 ${sc.raw.ssNet}（对${sc.raw.ssCorrect}错${sc.raw.ssWrong}） · 编码净分 ${sc.raw.cdNet}（对${sc.raw.cdCorrect}错${sc.raw.cdWrong}）` },
+      ];
+
+      // 构建题目复盘列表
+      const reviewItemsHTML = `
+        <div class="space-y-3">
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider pt-2">一、言语理解 (VCI)</div>
+          ${VCI_QUESTIONS.map((q, idx) => {
+            const ans = state.vciAnswers[idx] || {};
+            const isBest = ans.key === q.bestKey;
+            const isPartial = ans.score === 1;
+            const badge = isBest ? 'bg-emerald-100 text-emerald-800' : (isPartial ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+            const statusText = isBest ? '最佳 (2分)' : (isPartial ? '部分正确 (1分)' : '未得分 (0分)');
+            return `
+              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm">
+                <div class="flex items-start justify-between gap-3 mb-1.5">
+                  <span class="font-bold text-slate-900">Q${idx + 1}. ${q.prompt}</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0 ${badge}">${statusText}</span>
+                </div>
+                <div class="text-xs text-slate-600 mb-1">您的选择：<strong>${ans.key || '-'}</strong> ｜ 最佳答案：<strong>${q.bestKey}</strong></div>
+                <div class="text-xs text-slate-500 leading-relaxed">解析：${q.explanation}</div>
+              </div>
+            `;
+          }).join('')}
+
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider pt-4">二、知觉推理 (PRI)</div>
+          ${PRI_QUESTIONS.map((q, idx) => {
+            const ans = state.priAnswers[idx] || {};
+            const ok = ans.isCorrect;
+            return `
+              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm">
+                <div class="flex items-start justify-between gap-3 mb-1.5">
+                  <span class="font-bold text-slate-900">PRI-${idx + 1}. ${q.subtest}</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0 ${ok ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${ok ? '正确' : '错误'}</span>
+                </div>
+                <div class="text-xs text-slate-600 mb-1">您的选择：<strong>${ans.key || '-'}</strong> ｜ 标准答案：<strong>${q.bestKey}</strong></div>
+                <div class="text-xs text-slate-500 leading-relaxed">解析：${q.explanation}</div>
+              </div>
+            `;
+          }).join('')}
+
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider pt-4">三、工作记忆 (WMI)</div>
+          ${state.dsAnswers.map((a, idx) => {
+            const ok = a.input === a.expected;
+            return `
+              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm">
+                <div class="flex items-start justify-between gap-3 mb-1">
+                  <span class="font-bold text-slate-900">数字广度 ${idx + 1} · ${a.title}</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0 ${ok ? 'bg-emerald-100 text-emerald-800' : (a.score > 0 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800')}">${ok ? '完全正确' : (a.score > 0 ? '部分分' : '偏差')}</span>
+                </div>
+                <div class="text-xs text-slate-600">原始序列：<strong>${a.sequence}</strong> ｜ 您的输入：<strong>${a.input}</strong> ｜ 正确目标：<strong>${a.expected}</strong></div>
+              </div>
+            `;
+          }).join('')}
+
+          ${ARITHMETIC_QUESTIONS.map((q, idx) => {
+            const ans = state.arAnswers[idx] || {};
+            const ok = ans.isCorrect;
+            return `
+              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm">
+                <div class="flex items-start justify-between gap-3 mb-1.5">
+                  <span class="font-bold text-slate-900">心算 ${idx + 1}. ${q.prompt}</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0 ${ok ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${ok ? '正确' : (ans.timedOut ? '超时' : '错误')}</span>
+                </div>
+                <div class="text-xs text-slate-600 mb-1">您的选择：<strong>${ans.key || '-'}</strong> ｜ 标准答案：<strong>${q.bestKey}</strong></div>
+                <div class="text-xs text-slate-500 leading-relaxed">解析：${q.explanation}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      root.innerHTML = `
+        <div class="animate-fade-up space-y-6">
+          <!-- 核心总分报告卡 -->
+          <div class="bg-white rounded-3xl p-6 sm:p-9 shadow-sm border border-slate-200/80">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-7 border-b border-slate-100">
+              <div>
+                <div class="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">WAIS-IV 架构模拟评估报告</div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">全量表估计智商 (FSIQ)</h1>
+                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span>常模组：${state.ageGroup} 岁</span>
+                  <span>•</span>
+                  <span>总耗时：${durMin} 分 ${durRemSec} 秒</span>
+                  <span>•</span>
+                  <span>95% 置信区间：${ciLow} – ${ciHigh}</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-5 bg-slate-50 px-6 py-4 rounded-2xl border border-slate-200/80">
+                <div class="text-center">
+                  <div class="text-5xl sm:text-6xl font-black text-indigo-600 tracking-tight leading-none">${sc.FSIQ}</div>
+                  <div class="text-[11px] font-semibold text-slate-400 mt-1">标准分 (μ=100, σ=15)</div>
+                </div>
+                <div class="h-12 w-px bg-slate-200"></div>
+                <div class="space-y-1.5">
+                  <div class="inline-block px-3 py-1 rounded-full text-xs font-bold border ${sc.classification.color}">
+                    ${sc.classification.label}
+                  </div>
+                  <div class="text-xs text-slate-600 font-medium">
+                    超越约 <strong class="text-slate-900">${sc.percentile}%</strong> 的同龄人群
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 正态分布图 + 雷达图 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 py-7 border-b border-slate-100 items-center">
+              <div class="lg:col-span-7">
+                <div class="text-xs font-bold text-slate-500 mb-2">人群智商正态分布定位 (Bell Curve)</div>
+                ${renderBellCurveSVG(sc.FSIQ)}
+              </div>
+              <div class="lg:col-span-5">
+                <div class="text-xs font-bold text-slate-500 mb-1 text-center">四大核心指数能力雷达</div>
+                ${renderRadarSVG(sc)}
+              </div>
+            </div>
+
+            <!-- 四大核心指数详情条 -->
+            <div class="py-7 border-b border-slate-100">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-slate-900">四大分测验指数剖析</h3>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 font-semibold">GAI 一般能力: ${sc.GAI}</span>
+                  <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-semibold">CPI 认知效率: ${sc.CPI}</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                ${indexList.map(item => {
+                  const pct = clamp(((item.score - 55) / 90) * 100, 5, 100);
+                  return `
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <div>
+                          <span class="text-xs font-extrabold text-slate-400 mr-1.5">${item.code}</span>
+                          <span class="text-sm font-bold text-slate-900">${item.name}</span>
+                        </div>
+                        <span class="text-lg font-black text-slate-900">${item.score}</span>
+                      </div>
+                      <div class="w-full h-2 rounded-full bg-slate-200 overflow-hidden mb-2">
+                        <div class="h-full rounded-full ${item.color}" style="width: ${pct}%"></div>
+                      </div>
+                      <div class="text-[11px] text-slate-500">${item.detail}</div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- 个人认知特征解读 -->
+            <div class="pt-6">
+              <h3 class="text-base font-bold text-slate-900 mb-3">综合认知剖面解读</h3>
+              <div class="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-sm text-slate-700 leading-relaxed">
+                ${generateCognitiveInsight(sc)}
+              </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-7 pt-6 border-t border-slate-100">
+              <button id="btn-toggle-review" type="button" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors">
+                查看全部题目解析与复盘
+              </button>
+              <div class="flex items-center gap-3">
+                <button id="btn-copy-report" type="button" class="px-5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold transition-colors">
+                  复制评估结果
+                </button>
+                <button id="btn-restart" type="button" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition-colors">
+                  重新测试
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 展开式题目复盘区 -->
+          <div id="review-panel" class="hidden bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 animate-fade-up">
+            <h3 class="text-lg font-bold text-slate-900 mb-4">题目作答详情与逻辑解析</h3>
+            ${reviewItemsHTML}
+          </div>
+        </div>
+      `;
+
+      // 切换复盘面板
+      document.getElementById('btn-toggle-review').addEventListener('click', (e) => {
+        const panel = document.getElementById('review-panel');
+        const isHidden = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden');
+        e.target.textContent = isHidden ? '收起题目解析' : '查看全部题目解析与复盘';
+        if (isHidden) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+
+      // 复制成绩摘要（兼容 iframe，使用 document.execCommand）
+      document.getElementById('btn-copy-report').addEventListener('click', () => {
+        const text = [
+          `【WAIS-IV 架构成人智商模拟评估报告】`,
+          `全量表估计智商 (FSIQ)：${sc.FSIQ}（${sc.classification.label}，95%置信区间 ${ciLow}-${ciHigh}）`,
+          `百分位排名：超越约 ${sc.percentile}% 同龄人群`,
+          `---------------------------`,
+          `• 言语理解指数 (VCI)：${sc.VCI}`,
+          `• 知觉推理指数 (PRI)：${sc.PRI}`,
+          `• 工作记忆指数 (WMI)：${sc.WMI}`,
+          `• 加工速度指数 (PSI)：${sc.PSI}`,
+          `• 一般能力指数 (GAI)：${sc.GAI} ｜ 认知效率指数 (CPI)：${sc.CPI}`
+        ].join('\n');
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          showToast('评估报告摘要已复制到剪贴板');
+        } catch (err) {
+          showToast('复制失败，请手动选中文本复制');
+        }
+        document.body.removeChild(textarea);
+      });
+
+      document.getElementById('btn-restart').addEventListener('click', resetTest);
+    }
+
+    // =========================================================================
+    // 7. 启动初始化
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
